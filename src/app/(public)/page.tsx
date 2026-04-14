@@ -7,21 +7,21 @@ import FeaturedWork from '@/components/gallery/FeaturedWork';
 import Testimonials from '@/components/ui/Testimonials';
 import Awards from '@/components/ui/Awards';
 
-// Sample photos for carousel — replace with real photos
+// Photos for carousel — real images loaded from /images/
 const CAROUSEL_DATA = [
   {
     id: 'wedding',
     label: 'WEDDING',
     color: '#C9A84C',
     photos: [
-      { id: 'w1', title: 'Golden Hour', category: 'Wedding', url: '' },
-      { id: 'w2', title: 'First Look', category: 'Wedding', url: '' },
-      { id: 'w3', title: 'The Vows', category: 'Wedding', url: '' },
-      { id: 'w4', title: 'First Dance', category: 'Wedding', url: '' },
-      { id: 'w5', title: 'The Rings', category: 'Wedding', url: '' },
-      { id: 'w6', title: 'Sunset Portrait', category: 'Wedding', url: '' },
-      { id: 'w7', title: 'Candid Joy', category: 'Wedding', url: '' },
-      { id: 'w8', title: 'Grand Exit', category: 'Wedding', url: '' },
+      { id: 'w1', title: 'Bride in Gown', category: 'Wedding', url: '/images/wedding/wedding_01_bride_gown.webp' },
+      { id: 'w2', title: 'First Look', category: 'Wedding', url: '/images/wedding/wedding_02_first_look.webp' },
+      { id: 'w3', title: 'Wedding Rings', category: 'Wedding', url: '/images/wedding/wedding_03_wedding_rings.webp' },
+      { id: 'w4', title: 'Candlelit Ceremony', category: 'Wedding', url: '/images/wedding/wedding_04_candlelit_ceremony.webp' },
+      { id: 'w5', title: 'Sunset Portrait', category: 'Wedding', url: '/images/wedding/wedding_05_sunset_portrait.webp' },
+      { id: 'w6', title: 'Bridal Details', category: 'Wedding', url: '/images/wedding/wedding_06_bridal_details.webp' },
+      { id: 'w7', title: 'Candid Laughter', category: 'Wedding', url: '/images/wedding/wedding_07_candid_laughter.webp' },
+      { id: 'w8', title: 'Grand Exit', category: 'Wedding', url: '/images/wedding/wedding_08_grand_exit.webp' },
     ],
   },
   {
