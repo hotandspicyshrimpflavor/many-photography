@@ -1,7 +1,43 @@
-import Navigation from '@/components/ui/Navigation';
-import Footer from '@/components/ui/Footer';
+'use client';
+
+import { useState } from 'react';
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 
 export default function AdminLoginPage() {
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const router = useRouter();
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+    setIsLoading(true);
+
+    try {
+      const res = await fetch('/api/admin/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        setError(data.error || 'Invalid credentials');
+        setIsLoading(false);
+        return;
+      }
+
+      router.push('/admin/dashboard');
+    } catch {
+      setError('Something went wrong. Please try again.');
+      setIsLoading(false);
+    }
+  };
+
   return (
     <div style={{
       minHeight: '100vh',
@@ -32,12 +68,15 @@ export default function AdminLoginPage() {
           Admin Portal
         </p>
 
-        <form style={{
-          background: 'var(--color-surface)',
-          padding: 'var(--space-xl)',
-          borderRadius: '8px',
-          border: '1px solid var(--color-border)',
-        }}>
+        <form
+          onSubmit={handleSubmit}
+          style={{
+            background: 'var(--color-surface)',
+            padding: 'var(--space-xl)',
+            borderRadius: '8px',
+            border: '1px solid var(--color-border)',
+          }}
+        >
           <div style={{ marginBottom: 'var(--space-lg)' }}>
             <label htmlFor="email" style={{
               display: 'block',
@@ -51,7 +90,10 @@ export default function AdminLoginPage() {
             <input
               type="email"
               id="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
               required
+              autoComplete="email"
               style={{
                 width: '100%',
                 padding: 'var(--space-md)',
@@ -77,7 +119,10 @@ export default function AdminLoginPage() {
             <input
               type="password"
               id="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
               required
+              autoComplete="current-password"
               style={{
                 width: '100%',
                 padding: 'var(--space-md)',
@@ -90,8 +135,24 @@ export default function AdminLoginPage() {
             />
           </div>
 
-          <button type="submit" className="btn btn-primary" style={{ width: '100%' }}>
-            Login
+          {error && (
+            <p style={{
+              marginBottom: 'var(--space-md)',
+              color: 'var(--color-error)',
+              fontSize: '0.875rem',
+              textAlign: 'left',
+            }}>
+              {error}
+            </p>
+          )}
+
+          <button
+            type="submit"
+            disabled={isLoading}
+            className="btn btn-primary"
+            style={{ width: '100%', opacity: isLoading ? 0.7 : 1 }}
+          >
+            {isLoading ? 'Logging in...' : 'Login'}
           </button>
         </form>
 

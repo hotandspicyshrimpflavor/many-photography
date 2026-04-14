@@ -43,19 +43,9 @@ export async function getSignedUrl(
 export async function getUploadUrl(
   path: string,
   expirySeconds: number = 3600
-): Promise<{ uploadUrl: string; accessKey: string; secretKey: string }> {
-  const policy = await minioClient.getPresignedPostPolicy(
-    new Minio.PostPolicy()
-      .setKey(path)
-      .setBucket(BUCKET)
-      .setExpires(new Date(Date.now() + expirySeconds * 1000))
-  );
-
-  return {
-    uploadUrl: `https://${process.env.MINIO_ENDPOINT}/${BUCKET}/${path}`,
-    accessKey: process.env.MINIO_ACCESS_KEY || '',
-    secretKey: process.env.MINIO_SECRET_KEY || '',
-  };
+): Promise<string> {
+  await ensureBucket();
+  return await minioClient.presignedPutObject(BUCKET, path, expirySeconds);
 }
 
 export async function deleteFile(path: string): Promise<void> {

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, use } from 'react';
+import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 
 export default function PortalPage() {

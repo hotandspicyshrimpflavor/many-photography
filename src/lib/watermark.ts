@@ -251,6 +251,8 @@ export async function embedSteganographicWatermark(
     }
   }
 
+  // Must use PNG to preserve the alpha channel where the watermark is embedded.
+  // JPEG strips alpha and would destroy the hidden watermark.
   return await sharp(data, {
     raw: {
       width: info.width,
@@ -258,7 +260,7 @@ export async function embedSteganographicWatermark(
       channels: 4,
     },
   })
-    .jpeg({ quality: 100 })
+    .png({ compressionLevel: 9 })
     .toBuffer();
 }
 

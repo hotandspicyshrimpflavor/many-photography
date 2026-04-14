@@ -3,6 +3,15 @@ import { Resend } from 'resend';
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
+function escapeHtml(str: string): string {
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+
 export async function POST(req: NextRequest) {
   try {
     const { name, email, phone, service, date, message, website } = await req.json();
@@ -20,20 +29,27 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    const safeName = escapeHtml(name);
+    const safeEmail = escapeHtml(email);
+    const safePhone = phone ? escapeHtml(phone) : 'Not provided';
+    const safeService = escapeHtml(service);
+    const safeDate = date ? escapeHtml(date) : 'Not specified';
+    const safeMessage = escapeHtml(message).replace(/\n/g, '<br>');
+
     // Send email to Many
     const { error } = await resend.emails.send({
       from: 'Contact Form <noreply@manyphotography.com>',
       to: ['many@manyphotography.com'],
-      subject: `New Inquiry: ${service} from ${name}`,
+      subject: `New Inquiry: ${safeService} from ${safeName}`,
       html: `
         <h2>New Contact Form Submission</h2>
-        <p><strong>Name:</strong> ${name}</p>
-        <p><strong>Email:</strong> ${email}</p>
-        <p><strong>Phone:</strong> ${phone || 'Not provided'}</p>
-        <p><strong>Service:</strong> ${service}</p>
-        <p><strong>Preferred Date:</strong> ${date || 'Not specified'}</p>
+        <p><strong>Name:</strong> ${safeName}</p>
+        <p><strong>Email:</strong> ${safeEmail}</p>
+        <p><strong>Phone:</strong> ${safePhone}</p>
+        <p><strong>Service:</strong> ${safeService}</p>
+        <p><strong>Preferred Date:</strong> ${safeDate}</p>
         <h3>Message:</h3>
-        <p>${message.replace(/\n/g, '<br>')}</p>
+        <p>${safeMessage}</p>
       `,
     });
 
@@ -51,9 +67,9 @@ export async function POST(req: NextRequest) {
       to: [email],
       subject: 'Thanks for reaching out!',
       html: `
-        <h2>Hi ${name},</h2>
-        <p>Thank you for your message! I&apos;ve received your inquiry about ${service}.</p>
-        <p>I typically respond within 24 hours. Can&apos;t wait to learn more about your vision!</p>
+        <h2>Hi ${safeName},</h2>
+        <p>Thank you for your message! I've received your inquiry about ${safeService}.</p>
+        <p>I typically respond within 24 hours. Can't wait to learn more about your vision!</p>
         <p>Best,<br>Many</p>
       `,
     });
