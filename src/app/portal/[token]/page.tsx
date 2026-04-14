@@ -65,10 +65,18 @@ export default function ClientGalleryPage() {
           expiresAt: verifyData.expiresAt,
         });
 
-        // TODO: Fetch files for this gallery (depends on having actual data)
-        // For now, simulate with empty files — real implementation would call:
-        // GET /api/gallery/:id/files
-        setFiles([]);
+        // Fetch files for this gallery using the verified token for auth
+        const filesRes = await fetch(`/api/gallery/${verifyData.galleryId}/files`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+
+        if (filesRes.ok) {
+          const filesData = await filesRes.json();
+          setFiles(filesData.files || []);
+        } else {
+          // Gallery exists but no files yet — not a fatal error
+          setFiles([]);
+        }
         setLoading(false);
       } catch (err) {
         setError('Failed to load gallery');

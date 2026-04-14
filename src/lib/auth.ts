@@ -1,4 +1,5 @@
 import bcrypt from 'bcryptjs';
+import { randomBytes } from 'crypto';
 
 /**
  * Generate a client token from full name and first shoot date
@@ -29,7 +30,7 @@ export async function verifyToken(token: string, hash: string): Promise<boolean>
  * Generate a secure random string for sessions
  */
 export function generateSessionToken(): string {
-  return require('crypto').randomBytes(48).toString('base64url');
+  return randomBytes(48).toString('base64url');
 }
 
 /**

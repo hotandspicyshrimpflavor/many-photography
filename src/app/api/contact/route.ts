@@ -22,13 +22,45 @@ function escapeHtml(str: string): string {
     .replace(/'/g, '&#039;');
 }
 
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+// Simple in-memory rate limiter: 5 submissions per IP per hour
+const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
+
+function checkRateLimit(ip: string): boolean {
+  const now = Date.now();
+  const entry = rateLimitMap.get(ip);
+
+  if (!entry || now > entry.resetAt) {
+    rateLimitMap.set(ip, { count: 1, resetAt: now + 60 * 60 * 1000 });
+    return true;
+  }
+
+  if (entry.count >= 5) return false;
+  entry.count++;
+  return true;
+}
+
 export async function POST(req: NextRequest) {
   try {
+    // Rate limit by IP
+    const ip =
+      req.headers.get('x-forwarded-for')?.split(',')[0].trim() ||
+      req.headers.get('x-real-ip') ||
+      'unknown';
+
+    if (!checkRateLimit(ip)) {
+      return NextResponse.json(
+        { error: 'Too many submissions. Please try again later.' },
+        { status: 429 }
+      );
+    }
+
     const { name, email, phone, service, date, message, website } = await req.json();
 
     // Honeypot check
     if (website) {
-      // Bot detected - silently succeed to not tip off bots
+      // Bot detected — silently succeed to not reveal the trap
       return NextResponse.json({ success: true });
     }
 
@@ -39,12 +71,28 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const safeName = escapeHtml(name);
-    const safeEmail = escapeHtml(email);
-    const safePhone = phone ? escapeHtml(phone) : 'Not provided';
-    const safeService = escapeHtml(service);
-    const safeDate = date ? escapeHtml(date) : 'Not specified';
-    const safeMessage = escapeHtml(message).replace(/\n/g, '<br>');
+    if (!EMAIL_REGEX.test(email)) {
+      return NextResponse.json(
+        { error: 'Invalid email address' },
+        { status: 400 }
+      );
+    }
+
+    // Enforce reasonable length limits
+    if (
+      String(name).length > 200 ||
+      String(email).length > 254 ||
+      String(message).length > 5000
+    ) {
+      return NextResponse.json({ error: 'Input too long' }, { status: 400 });
+    }
+
+    const safeName = escapeHtml(String(name));
+    const safeEmail = escapeHtml(String(email));
+    const safePhone = phone ? escapeHtml(String(phone)) : 'Not provided';
+    const safeService = escapeHtml(String(service));
+    const safeDate = date ? escapeHtml(String(date)) : 'Not specified';
+    const safeMessage = escapeHtml(String(message)).replace(/\n/g, '<br>');
 
     // Send email to Many
     const { error } = await getResend().emails.send({

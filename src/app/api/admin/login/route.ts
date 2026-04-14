@@ -8,6 +8,9 @@ function getJwtSecret(): Uint8Array {
   if (!secret) {
     throw new Error('JWT_SECRET environment variable is not set. Please configure it in .env');
   }
+  if (secret.length < 32) {
+    throw new Error('JWT_SECRET must be at least 32 characters. Use a cryptographically random value.');
+  }
   return new TextEncoder().encode(secret);
 }
 

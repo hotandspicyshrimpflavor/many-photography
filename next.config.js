@@ -32,7 +32,8 @@ const securityHeaders = [
     key: 'Content-Security-Policy',
     value: [
       "default-src 'self'",
-      "script-src 'self' 'unsafe-eval' 'unsafe-inline'",
+      // unsafe-eval removed; add back only if a specific dependency requires it and document why
+      "script-src 'self' 'unsafe-inline'",
       "style-src 'self' 'unsafe-inline'",
       "img-src 'self' data: blob: https://**.cf-rstatic.com https://*.minio.local",
       "font-src 'self'",

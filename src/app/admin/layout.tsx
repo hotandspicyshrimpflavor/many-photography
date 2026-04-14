@@ -9,27 +9,21 @@ export default function AdminLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const router = useRouter();
 
   const handleLogout = async () => {
     setIsLoggingOut(true);
-    // Clear session cookie/token
     try {
       await fetch('/api/admin/logout', { method: 'POST' });
-      setIsAuthenticated(false);
-      router.push('/admin/login');
     } catch (error) {
       console.error('Logout error:', error);
+    } finally {
+      // Redirect regardless of fetch outcome — middleware will enforce auth
+      router.push('/admin');
     }
     setIsLoggingOut(false);
   };
-
-  if (!isAuthenticated) {
-    // Will be handled by the login page
-    return <>{children}</>;
-  }
 
   return (
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
@@ -88,7 +82,7 @@ export default function AdminLayout({
             color: 'var(--color-text-muted)',
             fontSize: '0.875rem',
           }}>
-            View Site →
+            View Site &rarr;
           </Link>
           <button
             onClick={handleLogout}

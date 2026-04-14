@@ -1,72 +1,102 @@
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/db';
+import { verifyToken, isValidTokenFormat, parseToken } from '@/lib/auth';
+
+/**
+ * Resolve a bearer token to a gallery + client via proper bcrypt verification.
+ * Previously the code used `tokenHash: token` (comparing raw token against a hash)
+ * which would never match. This implements the same pattern as /api/portal/verify.
+ */
+async function resolveGalleryByToken(token: string) {
+  if (!isValidTokenFormat(token)) return null;
+
+  const parsed = parseToken(token);
+  if (!parsed) return null;
+
+  const { fullName } = parsed;
+  const normalizedToken = token.toUpperCase();
+
+  const clients = await prisma.client.findMany({
+    where: { fullName: { equals: fullName, mode: 'insensitive' } },
+    include: {
+      galleries: {
+        include: {
+          tokens: { where: { isActive: true } },
+        },
+      },
+    },
+  });
+
+  for (const client of clients) {
+    for (const gallery of client.galleries) {
+      for (const tokenRecord of gallery.tokens) {
+        // Skip locked tokens
+        if (tokenRecord.lockedUntil && new Date(tokenRecord.lockedUntil) > new Date()) {
+          continue;
+        }
+        if (await verifyToken(normalizedToken, tokenRecord.tokenHash)) {
+          return { gallery, client };
+        }
+      }
+    }
+  }
+
+  return null;
+}
 
 /**
  * POST /api/favorites — Add a favorite (with optional note)
  * DELETE /api/favorites — Remove a favorite
- * 
- * Both require a gallery token via Authorization header.
- * Token format: "NAME-YYYY-MM-DD"
+ * GET /api/favorites — List all favorites for the authenticated client
+ *
+ * All require: Authorization: Bearer <NAME-YYYY-MM-DD token>
  */
 export async function POST(req: NextRequest) {
   try {
     const authHeader = req.headers.get('authorization');
-    if (!authHeader) {
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
       return NextResponse.json({ error: 'Authorization header required' }, { status: 401 });
     }
 
-    const token = authHeader.replace('Bearer ', '');
+    const token = authHeader.slice(7).trim();
     const { fileId, note } = await req.json();
 
-    if (!fileId) {
+    if (!fileId || typeof fileId !== 'string') {
       return NextResponse.json({ error: 'fileId is required' }, { status: 400 });
     }
 
-    // Find client by token
-    const gallery = await prisma.gallery.findFirst({
-      where: {
-        tokens: {
-          some: {
-            tokenHash: token, // In production: hash and compare
-            isActive: true,
-          },
-        },
-      },
-      include: {
-        client: true,
-        files: { where: { id: fileId } },
-      },
-    });
-
-    if (!gallery) {
+    const resolved = await resolveGalleryByToken(token);
+    if (!resolved) {
       return NextResponse.json({ error: 'Invalid or expired token' }, { status: 401 });
     }
 
+    const { gallery, client } = resolved;
+
+    // Check gallery expiry
+    if (gallery.expiresAt && new Date(gallery.expiresAt) < new Date()) {
+      return NextResponse.json({ error: 'This gallery has expired' }, { status: 410 });
+    }
+
     // Verify file belongs to this gallery
-    if (!gallery.files.find(f => f.id === fileId)) {
+    const file = await prisma.file.findFirst({
+      where: { id: fileId, galleryId: gallery.id },
+    });
+
+    if (!file) {
       return NextResponse.json({ error: 'File not found in this gallery' }, { status: 404 });
     }
 
+    // Sanitize note (max 500 chars)
+    const safeNote = typeof note === 'string' ? note.slice(0, 500) : '';
+
     // Upsert favorite (add or update note)
     const favorite = await prisma.favorite.upsert({
-      where: {
-        clientId_fileId: {
-          clientId: gallery.clientId,
-          fileId,
-        },
-      },
-      update: { note: note || '' },
-      create: {
-        clientId: gallery.clientId,
-        fileId,
-        note: note || '',
-      },
+      where: { clientId_fileId: { clientId: client.id, fileId } },
+      update: { note: safeNote },
+      create: { clientId: client.id, fileId, note: safeNote },
     });
 
-    // Get count for response
-    const count = await prisma.favorite.count({
-      where: { clientId: gallery.clientId },
-    });
+    const count = await prisma.favorite.count({ where: { clientId: client.id } });
 
     return NextResponse.json({ success: true, favoriteId: favorite.id, favoritesCount: count });
   } catch (error) {
@@ -78,46 +108,29 @@ export async function POST(req: NextRequest) {
 export async function DELETE(req: NextRequest) {
   try {
     const authHeader = req.headers.get('authorization');
-    if (!authHeader) {
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
       return NextResponse.json({ error: 'Authorization header required' }, { status: 401 });
     }
 
-    const token = authHeader.replace('Bearer ', '');
+    const token = authHeader.slice(7).trim();
     const { fileId } = await req.json();
 
-    if (!fileId) {
+    if (!fileId || typeof fileId !== 'string') {
       return NextResponse.json({ error: 'fileId is required' }, { status: 400 });
     }
 
-    // Find gallery by token
-    const gallery = await prisma.gallery.findFirst({
-      where: {
-        tokens: {
-          some: {
-            tokenHash: token,
-            isActive: true,
-          },
-        },
-      },
-      include: { client: true },
-    });
-
-    if (!gallery) {
+    const resolved = await resolveGalleryByToken(token);
+    if (!resolved) {
       return NextResponse.json({ error: 'Invalid or expired token' }, { status: 401 });
     }
 
-    // Delete favorite
+    const { client } = resolved;
+
     await prisma.favorite.deleteMany({
-      where: {
-        clientId: gallery.clientId,
-        fileId,
-      },
+      where: { clientId: client.id, fileId },
     });
 
-    // Get updated count
-    const count = await prisma.favorite.count({
-      where: { clientId: gallery.clientId },
-    });
+    const count = await prisma.favorite.count({ where: { clientId: client.id } });
 
     return NextResponse.json({ success: true, favoritesCount: count });
   } catch (error) {
@@ -129,32 +142,21 @@ export async function DELETE(req: NextRequest) {
 export async function GET(req: NextRequest) {
   try {
     const authHeader = req.headers.get('authorization');
-    if (!authHeader) {
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
       return NextResponse.json({ error: 'Authorization header required' }, { status: 401 });
     }
 
-    const token = authHeader.replace('Bearer ', '');
+    const token = authHeader.slice(7).trim();
 
-    // Find gallery by token
-    const gallery = await prisma.gallery.findFirst({
-      where: {
-        tokens: {
-          some: {
-            tokenHash: token,
-            isActive: true,
-          },
-        },
-      },
-      include: { client: true },
-    });
-
-    if (!gallery) {
+    const resolved = await resolveGalleryByToken(token);
+    if (!resolved) {
       return NextResponse.json({ error: 'Invalid or expired token' }, { status: 401 });
     }
 
-    // Get all favorites for this client
+    const { client } = resolved;
+
     const favorites = await prisma.favorite.findMany({
-      where: { clientId: gallery.clientId },
+      where: { clientId: client.id },
       include: { file: true },
       orderBy: { createdAt: 'desc' },
     });

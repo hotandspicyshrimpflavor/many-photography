@@ -8,6 +8,10 @@ async function main() {
   const password = process.env.ADMIN_PASSWORD || 'change-me-immediately';
   const name = 'Many';
 
+  if (password === 'change-me-immediately') {
+    console.warn('⚠️  Using default password. Set ADMIN_PASSWORD in your .env before running this script.');
+  }
+
   const hashedPassword = await bcrypt.hash(password, 12);
 
   const admin = await prisma.admin.upsert({
@@ -24,8 +28,7 @@ async function main() {
   });
 
   console.log(`✅ Admin created/updated: ${admin.email}`);
-  console.log(`   Password: ${password}`);
-  console.log(`   ⚠️  Change this password immediately after first login!`);
+  console.log(`   ⚠️  Ensure you are using a strong, unique password in production!`);
 }
 
 main()

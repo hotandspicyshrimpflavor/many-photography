@@ -61,3 +61,19 @@ next-env.d.ts
 
 # Debug
 node_modules/.cache/
+
+# Secrets / keys — never commit these
+*.pem
+*.key
+*.p12
+*.pfx
+*.crt
+secrets/
+.secrets
+
+# Sharp native binaries
+.sharp/
+
+# Uploaded/processed media (use MinIO instead)
+uploads/
+public/uploads/
