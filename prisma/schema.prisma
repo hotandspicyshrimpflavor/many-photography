@@ -1,0 +1,118 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Client {
+  id        String   @id @default(uuid())
+  fullName  String
+  email     String   @unique
+  phone     String?
+  notes     String?
+  createdAt DateTime @default(now()) @map(name: "created_at")
+  updatedAt DateTime @updatedAt @map(name: "updated_at")
+
+  galleries Gallery[]
+
+  @@map(name: "clients")
+}
+
+model Gallery {
+  id                  String    @id @default(uuid())
+  clientId            String    @map(name: "client_id")
+  title               String
+  sessionDate         DateTime  @map(name: "session_date")
+  description         String?
+  printQualityIncluded Boolean  @default(false) @map(name: "print_quality_included")
+  expiresAt           DateTime? @map(name: "expires_at")
+  createdAt           DateTime  @default(now()) @map(name: "created_at")
+  updatedAt           DateTime  @updatedAt @map(name: "updated_at")
+
+  client   Client     @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  tokens    Token[]
+  files     File[]
+  downloads Download[]
+  printRequests PrintRequest[]
+
+  @@map(name: "galleries")
+}
+
+model Token {
+  id          String    @id @default(uuid())
+  galleryId   String    @map(name: "gallery_id")
+  tokenHash   String    @map(name: "token_hash")
+  isActive    Boolean   @default(true) @map(name: "is_active")
+  attempts    Int       @default(0)
+  lockedUntil DateTime? @map(name: "locked_until")
+  createdAt   DateTime  @default(now()) @map(name: "created_at")
+  updatedAt   DateTime  @updatedAt @map(name: "updated_at")
+
+  gallery   Gallery    @relation(fields: [galleryId], references: [id], onDelete: Cascade)
+  downloads Download[]
+
+  @@map(name: "tokens")
+}
+
+model File {
+  id                String    @id @default(uuid())
+  galleryId         String    @map(name: "gallery_id")
+  originalFilename  String    @map(name: "original_filename")
+  storagePath       String    @map(name: "storage_path")
+  fileType          String    @map(name: "file_type") // 'image' | 'video'
+  mimeType          String    @map(name: "mime_type")
+  fileSize          BigInt    @map(name: "file_size")
+  thumbnailPath     String?   @map(name: "thumbnail_path")
+  webQualityPath    String?   @map(name: "web_quality_path")
+  printQualityPath  String?   @map(name: "print_quality_path")
+  createdAt         DateTime  @default(now()) @map(name: "created_at")
+
+  gallery Gallery @relation(fields: [galleryId], references: [id], onDelete: Cascade)
+
+  @@map(name: "files")
+}
+
+model Download {
+  id          String    @id @default(uuid())
+  galleryId   String    @map(name: "gallery_id")
+  tokenId     String    @map(name: "token_id")
+  quality     String    // 'web' | 'print'
+  fileCount   Int       @map(name: "file_count")
+  ipAddress   String    @map(name: "ip_address")
+  downloadedAt DateTime @default(now()) @map(name: "downloaded_at")
+
+  gallery Gallery @relation(fields: [galleryId], references: [id], onDelete: Cascade)
+  token   Token   @relation(fields: [tokenId], references: [id], onDelete: Cascade)
+
+  @@map(name: "downloads")
+}
+
+model PrintRequest {
+  id              String    @id @default(uuid())
+  galleryId       String    @map(name: "gallery_id")
+  clientEmail     String    @map(name: "client_email")
+  intendedUse     String    @map(name: "intended_use")
+  status          String    @default("pending") // 'pending' | 'approved' | 'rejected'
+  stripePaymentId String?   @map(name: "stripe_payment_id")
+  createdAt       DateTime  @default(now()) @map(name: "created_at")
+  updatedAt       DateTime  @updatedAt @map(name: "updated_at")
+
+  gallery Gallery @relation(fields: [galleryId], references: [id], onDelete: Cascade)
+
+  @@map(name: "print_requests")
+}
+
+model Admin {
+  id        String    @id @default(uuid())
+  email     String    @unique
+  password  String
+  name      String
+  totpSecret String?  @map(name: "totp_secret")
+  createdAt DateTime  @default(now()) @map(name: "created_at")
+  updatedAt DateTime  @updatedAt @map(name: "updated_at")
+
+  @@map(name: "admins")
+}

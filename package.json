@@ -1,0 +1,47 @@
+{
+  "name": "many-photography",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "db:generate": "prisma generate",
+    "db:push": "prisma db push",
+    "db:studio": "prisma studio"
+  },
+  "dependencies": {
+    "@prisma/client": "^5.22.0",
+    "@react-email/components": "^0.0.26",
+    "@react-email/render": "^1.0.3",
+    "@react-email/resend": "^0.0.13",
+    "@studio-freight/lenis": "^1.0.42",
+    "bcryptjs": "^2.4.3",
+    "clsx": "^2.1.1",
+    "gsap": "^3.12.5",
+    "lucide-react": "^0.460.0",
+    "minio": "^8.0.3",
+    "next": "14.2.18",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-email": "^3.0.5",
+    "resend": "^4.0.0",
+    "sharp": "^0.33.5",
+    "three": "^0.170.0",
+    "uuid": "^11.0.3",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@types/bcryptjs": "^2.4.6",
+    "@types/node": "^20.17.9",
+    "@types/react": "^18.3.12",
+    "@types/react-dom": "^18.3.1",
+    "@types/three": "^0.170.0",
+    "@types/uuid": "^10.0.0",
+    "eslint": "^8.57.1",
+    "eslint-config-next": "14.2.18",
+    "prisma": "^5.22.0",
+    "typescript": "^5.7.2"
+  }
+}
