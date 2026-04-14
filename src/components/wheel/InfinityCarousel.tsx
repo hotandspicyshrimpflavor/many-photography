@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState, useCallback, useMemo } from 'react';
+import Image from 'next/image';
 import * as THREE from 'three';
 import { gsap } from 'gsap';
 
@@ -1434,7 +1435,16 @@ export default function InfinityCarousel({ categories }: InfinityCarouselProps) 
             boxShadow: '0 0 100px rgba(201,168,76,0.12), 0 40px 100px rgba(0,0,0,0.7)',
           }}>
             {lightboxImage ? (
-              <img src={lightboxImage.url} alt={lightboxImage.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+              <div style={{ position: 'relative', width: '100%', height: '100%' }}>
+                <Image
+                  src={lightboxImage.url}
+                  alt={lightboxImage.title}
+                  fill
+                  style={{ objectFit: 'cover' }}
+                  sizes="(max-width: 768px) 100vw, 90vw"
+                  priority
+                />
+              </div>
             ) : (
               <div style={{
                 position: 'absolute',

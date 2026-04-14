@@ -26,7 +26,7 @@ export async function uploadFile(
   await ensureBucket();
 
   const path = `uploads/${Date.now()}-${fileName}`;
-  await minioClient.putObject(BUCKET, path, fileBuffer, {
+  await minioClient.putObject(BUCKET, path, fileBuffer, fileBuffer.length, {
     'Content-Type': mimeType,
   });
 

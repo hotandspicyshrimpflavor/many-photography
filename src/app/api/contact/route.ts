@@ -1,7 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { Resend } from 'resend';
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+let _resend: Resend | null = null;
+
+function getResend(): Resend {
+  if (!_resend) {
+    if (!process.env.RESEND_API_KEY) {
+      throw new Error('RESEND_API_KEY environment variable is not set');
+    }
+    _resend = new Resend(process.env.RESEND_API_KEY);
+  }
+  return _resend;
+}
 
 function escapeHtml(str: string): string {
   return str
@@ -37,7 +47,7 @@ export async function POST(req: NextRequest) {
     const safeMessage = escapeHtml(message).replace(/\n/g, '<br>');
 
     // Send email to Many
-    const { error } = await resend.emails.send({
+    const { error } = await getResend().emails.send({
       from: 'Contact Form <noreply@manyphotography.com>',
       to: ['many@manyphotography.com'],
       subject: `New Inquiry: ${safeService} from ${safeName}`,
@@ -62,14 +72,14 @@ export async function POST(req: NextRequest) {
     }
 
     // Send auto-reply to client
-    await resend.emails.send({
+    await getResend().emails.send({
       from: "Many's Photography <noreply@manyphotography.com>",
       to: [email],
       subject: 'Thanks for reaching out!',
       html: `
         <h2>Hi ${safeName},</h2>
-        <p>Thank you for your message! I've received your inquiry about ${safeService}.</p>
-        <p>I typically respond within 24 hours. Can't wait to learn more about your vision!</p>
+        <p>Thank you for your message! I&apos;ve received your inquiry about ${safeService}.</p>
+        <p>I typically respond within 24 hours. Can&apos;t wait to learn more about your vision!</p>
         <p>Best,<br>Many</p>
       `,
     });

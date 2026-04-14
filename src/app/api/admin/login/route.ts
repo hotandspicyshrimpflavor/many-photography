@@ -3,7 +3,13 @@ import bcrypt from 'bcryptjs';
 import { SignJWT } from 'jose';
 import prisma from '@/lib/db';
 
-const JWT_SECRET = new TextEncoder().encode(process.env.JWT_SECRET || 'change-me');
+function getJwtSecret(): Uint8Array {
+  const secret = process.env.JWT_SECRET;
+  if (!secret) {
+    throw new Error('JWT_SECRET environment variable is not set. Please configure it in .env');
+  }
+  return new TextEncoder().encode(secret);
+}
 
 export async function POST(req: NextRequest) {
   try {
@@ -43,7 +49,7 @@ export async function POST(req: NextRequest) {
       .setProtectedHeader({ alg: 'HS256' })
       .setIssuedAt()
       .setExpirationTime('24h')
-      .sign(JWT_SECRET);
+      .sign(getJwtSecret());
 
     const response = NextResponse.json({
       success: true,

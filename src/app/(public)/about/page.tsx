@@ -68,13 +68,13 @@ export default function AboutPage() {
                   My Story
                 </h2>
                 <p style={{ color: 'var(--color-text-secondary)', marginBottom: 'var(--space-md)', lineHeight: 1.8 }}>
-                  I picked up my first camera at sixteen — a hand-me-down from my grandfather. It was battered, outdated, and perfect. That summer, I photographed everything: the way afternoon light fell through my mother's kitchen window, the candid laughter of cousins at a backyard barbecue, the raw emotion at my grandmother's eightieth birthday.
+                  I picked up my first camera at sixteen — a hand-me-down from my grandfather. It was battered, outdated, and perfect. That summer, I photographed everything: the way afternoon light fell through my mother&apos;s kitchen window, the candid laughter of cousins at a backyard barbecue, the raw emotion at my grandmother&apos;s eightieth birthday.
                 </p>
                 <p style={{ color: 'var(--color-text-secondary)', marginBottom: 'var(--space-md)', lineHeight: 1.8 }}>
                   What started as obsession became purpose. Today, fifteen years and hundreds of sessions later, I still chase that same feeling — the moment when everything aligns, when light and emotion and human connection collide into a single, perfect frame.
                 </p>
                 <p style={{ color: 'var(--color-text-secondary)', lineHeight: 1.8 }}>
-                  My work has been featured in <em>Vogue</em>, <em>Harper's Bazaar</em>, and <em>Elle</em>. I've shot from Tuscany to Tokyo, from intimate elopements to grand celebrations. But my favorite work? It's always the next story I haven't told yet.
+                  My work has been featured in <em>Vogue</em>, <em>Harper&apos;s Bazaar</em>, and <em>Elle</em>. I&apos;ve shot from Tuscany to Tokyo, from intimate elopements to grand celebrations. But my favorite work? It&apos;s always the next story I haven&apos;t told yet.
                 </p>
               </div>
             </div>
@@ -102,12 +102,12 @@ export default function AboutPage() {
               {[
                 {
                   title: 'Light First',
-                  description: 'I don't chase perfect locations or expensive gear. I chase light. Everything else is details.',
+                  description: `I don't chase perfect locations or expensive gear. I chase light. Everything else is details.`,
                   icon: '☀️',
                 },
                 {
                   title: 'Moments Over Poses',
-                  description: 'The best photos happen when people forget there's a camera. I create space for that to occur naturally.',
+                  description: `The best photos happen when people forget there's a camera. I create space for that to occur naturally.`,
                   icon: '✨',
                 },
                 {
