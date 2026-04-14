@@ -16,7 +16,8 @@ model Client {
   createdAt DateTime @default(now()) @map(name: "created_at")
   updatedAt DateTime @updatedAt @map(name: "updated_at")
 
-  galleries Gallery[]
+  galleries  Gallery[]
+  favorites Favorite[]
 
   @@map(name: "clients")
 }
@@ -37,6 +38,7 @@ model Gallery {
   files     File[]
   downloads Download[]
   printRequests PrintRequest[]
+  photoSelections PhotoSelection[]
 
   @@map(name: "galleries")
 }
@@ -70,9 +72,40 @@ model File {
   printQualityPath  String?   @map(name: "print_quality_path")
   createdAt         DateTime  @default(now()) @map(name: "created_at")
 
-  gallery Gallery @relation(fields: [galleryId], references: [id], onDelete: Cascade)
+  gallery   Gallery     @relation(fields: [galleryId], references: [id], onDelete: Cascade)
+  favorites Favorite[]
 
   @@map(name: "files")
+}
+
+model Favorite {
+  id        String   @id @default(uuid())
+  clientId  String   @map(name: "client_id")
+  fileId    String   @map(name: "file_id")
+  note      String?  @default("")
+  createdAt DateTime @default(now()) @map(name: "created_at")
+
+  client Client @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  file   File   @relation(fields: [fileId], references: [id], onDelete: Cascade)
+
+  @@unique([clientId, fileId])
+  @@map(name: "favorites")
+}
+
+model PhotoSelection {
+  id          String    @id @default(uuid())
+  galleryId   String    @map(name: "gallery_id")
+  clientEmail String    @map(name: "client_email")
+  notes       Json      @default("[]") // [{fileId, note}]
+  status      String    @default("pending") // pending | approved | rejected
+  adminNotes  String?   @map(name: "admin_notes")
+  message     String?   // optional client message
+  submittedAt DateTime  @default(now()) @map(name: "submitted_at")
+  reviewedAt  DateTime? @map(name: "reviewed_at")
+
+  gallery Gallery @relation(fields: [galleryId], references: [id], onDelete: Cascade)
+
+  @@map(name: "photo_selections")
 }
 
 model Download {

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
 import Link from 'next/link';
 import { applyClientWatermark, createWatermarkPreview } from '@/lib/client-watermark';
 
@@ -37,7 +37,7 @@ export default function AdminDashboard() {
   const [token, setToken] = useState('');
   const [expiresAt, setExpiresAt] = useState('');
   const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([]);
-  const [activeTab, setActiveTab] = useState<'clients' | 'upload' | 'galleries'>('clients');
+  const [activeTab, setActiveTab] = useState<'clients' | 'upload' | 'galleries' | 'selections'>('clients');
   const [watermarkPreview, setWatermarkPreview] = useState<string | null>(null);
   const [watermarkOptions, setWatermarkOptions] = useState({
     position: 'corner' as 'corner' | 'center' | 'tiled',
@@ -191,7 +191,7 @@ export default function AdminDashboard() {
         background: 'var(--color-surface)',
         padding: '0 var(--space-xl)',
       }}>
-        {(['clients', 'upload', 'galleries'] as const).map(tab => (
+        {(['clients', 'upload', 'galleries', 'selections'] as const).map(tab => (
           <button
             key={tab}
             onClick={() => setActiveTab(tab)}
@@ -208,7 +208,7 @@ export default function AdminDashboard() {
               transition: 'all 0.2s',
             }}
           >
-            {tab === 'clients' ? 'Clients & Galleries' : tab === 'upload' ? 'Upload Gallery' : 'Manage Galleries'}
+            {tab === 'clients' ? 'Clients & Galleries' : tab === 'upload' ? 'Upload Gallery' : tab === 'galleries' ? 'Manage Galleries' : 'Selections'}
           </button>
         ))}
       </div>
@@ -680,7 +680,318 @@ export default function AdminDashboard() {
             </p>
           </div>
         )}
+
+        {/* Selections Tab */}
+        {activeTab === 'selections' && (
+          <SelectionsTab />
+        )}
       </div>
+    </div>
+  );
+}
+
+// Selections Tab Component
+function SelectionsTab() {
+  const [selections, setSelections] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [filter, setFilter] = useState<'all' | 'pending' | 'approved' | 'rejected'>('all');
+  const [selectedSelection, setSelectedSelection] = useState<any | null>(null);
+  const [adminNotes, setAdminNotes] = useState('');
+  const [actionLoading, setActionLoading] = useState(false);
+
+  useEffect(() => {
+    loadSelections();
+  }, [filter]);
+
+  async function loadSelections() {
+    setLoading(true);
+    try {
+      const params = filter !== 'all' ? `?status=${filter}` : '';
+      const res = await fetch(`/api/admin/selections${params}`, {
+        credentials: 'include',
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setSelections(data.selections || []);
+      }
+    } catch {
+      console.error('Failed to load selections');
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handleReview(selectionId: string, status: 'approved' | 'rejected') {
+    setActionLoading(true);
+    try {
+      const res = await fetch('/api/admin/selections', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ selectionId, status, adminNotes }),
+      });
+      if (res.ok) {
+        setSelections(prev =>
+          prev.map(s => s.id === selectionId ? { ...s, status, adminNotes } : s)
+        );
+        setSelectedSelection(null);
+        setAdminNotes('');
+      }
+    } catch {
+      alert('Failed to update selection');
+    } finally {
+      setActionLoading(false);
+    }
+  }
+
+  const filteredSelections = selections;
+
+  return (
+    <div>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--space-xl)' }}>
+        <h2 style={{ fontFamily: 'var(--font-display)' }}>Photo Selections</h2>
+        <div style={{ display: 'flex', gap: 8 }}>
+          {(['all', 'pending', 'approved', 'rejected'] as const).map(f => (
+            <button
+              key={f}
+              onClick={() => setFilter(f)}
+              style={{
+                padding: '6px 12px',
+                background: filter === f ? 'var(--color-primary)' : 'var(--color-surface)',
+                color: filter === f ? 'var(--color-bg)' : 'var(--color-text-secondary)',
+                border: '1px solid var(--color-border)',
+                borderRadius: 4,
+                cursor: 'pointer',
+                fontSize: '0.75rem',
+                textTransform: 'capitalize',
+              }}
+            >
+              {f}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {loading ? (
+        <p style={{ color: 'var(--color-text-muted)' }}>Loading...</p>
+      ) : filteredSelections.length === 0 ? (
+        <p style={{ color: 'var(--color-text-muted)', fontStyle: 'italic' }}>
+          No selections found.
+        </p>
+      ) : (
+        <div style={{ display: 'grid', gap: 'var(--space-md)' }}>
+          {filteredSelections.map(selection => (
+            <div
+              key={selection.id}
+              style={{
+                background: 'var(--color-surface)',
+                padding: 'var(--space-lg)',
+                borderRadius: 8,
+                border: '1px solid var(--color-border)',
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'flex-start',
+              }}
+            >
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+                  <span style={{
+                    background: selection.status === 'pending' ? '#D4A5A5' : selection.status === 'approved' ? '#4CAF50' : '#8A8A7A',
+                    color: 'var(--color-bg)',
+                    padding: '2px 8px',
+                    borderRadius: 4,
+                    fontSize: '0.625rem',
+                    fontWeight: 600,
+                    textTransform: 'uppercase',
+                  }}>
+                    {selection.status}
+                  </span>
+                  <span style={{ fontFamily: 'var(--font-display)', fontSize: '1rem' }}>
+                    {selection.gallery?.client?.fullName || 'Unknown'}
+                  </span>
+                </div>
+                <p style={{ fontSize: '0.875rem', color: 'var(--color-text-secondary)' }}>
+                  {selection.gallery?.title || 'Unknown gallery'}
+                </p>
+                <p style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)', marginTop: 4 }}>
+                  {selection.notes?.length || 0} photos selected
+                  {' · '}
+                  Submitted {new Date(selection.submittedAt).toLocaleDateString()}
+                </p>
+              </div>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <button
+                  onClick={() => {
+                    setSelectedSelection(selection);
+                    setAdminNotes(selection.adminNotes || '');
+                  }}
+                  style={{
+                    padding: '6px 12px',
+                    background: 'var(--color-bg)',
+                    border: '1px solid var(--color-border)',
+                    borderRadius: 4,
+                    color: 'var(--color-text-secondary)',
+                    cursor: 'pointer',
+                    fontSize: '0.75rem',
+                  }}
+                >
+                  Review
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Selection Detail Modal */}
+      {selectedSelection && (
+        <div style={{
+          position: 'fixed',
+          inset: 0,
+          background: 'rgba(0,0,0,0.8)',
+          zIndex: 1001,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: '1rem',
+        }}>
+          <div style={{
+            background: 'var(--color-surface)',
+            borderRadius: 8,
+            padding: 'var(--space-xl)',
+            maxWidth: 600,
+            width: '100%',
+            maxHeight: '90vh',
+            overflow: 'auto',
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 'var(--space-lg)' }}>
+              <div>
+                <h3 style={{ fontFamily: 'var(--font-display)', marginBottom: 4 }}>
+                  {selectedSelection.gallery?.client?.fullName}
+                </h3>
+                <p style={{ color: 'var(--color-text-secondary)', fontSize: '0.875rem' }}>
+                  {selectedSelection.gallery?.title}
+                </p>
+                <p style={{ color: 'var(--color-text-muted)', fontSize: '0.75rem', marginTop: 4 }}>
+                  {new Date(selectedSelection.submittedAt).toLocaleString()}
+                </p>
+              </div>
+              <button
+                onClick={() => setSelectedSelection(null)}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  color: 'var(--color-text-muted)',
+                  cursor: 'pointer',
+                  fontSize: '1.25rem',
+                }}
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Selected Photos */}
+            <div style={{ marginBottom: 'var(--space-lg)' }}>
+              <h4 style={{ fontSize: '0.875rem', color: 'var(--color-text-secondary)', marginBottom: 'var(--space-sm)' }}>
+                Selected Photos ({selectedSelection.notes?.length || 0})
+              </h4>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(120px, 1fr))', gap: 8 }}>
+                {(selectedSelection.notes || []).map((note: any, idx: number) => (
+                  <div
+                    key={idx}
+                    style={{
+                      background: 'var(--color-bg)',
+                      borderRadius: 4,
+                      padding: 8,
+                      fontSize: '0.75rem',
+                    }}
+                  >
+                    <div style={{ fontFamily: 'var(--font-mono)', marginBottom: 4, color: 'var(--color-text-muted)' }}>
+                      Photo {idx + 1}
+                    </div>
+                    {note.note && (
+                      <div style={{ color: 'var(--color-primary)', fontStyle: 'italic' }}>
+                        "{note.note}"
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Admin Notes */}
+            <div style={{ marginBottom: 'var(--space-lg)' }}>
+              <label style={{ display: 'block', marginBottom: 4, fontSize: '0.875rem', color: 'var(--color-text-secondary)' }}>
+                Admin Notes
+              </label>
+              <textarea
+                value={adminNotes}
+                onChange={e => setAdminNotes(e.target.value)}
+                placeholder="Add notes about this selection..."
+                style={{
+                  width: '100%',
+                  minHeight: 80,
+                  padding: '0.75rem',
+                  background: 'var(--color-bg)',
+                  border: '1px solid var(--color-border)',
+                  borderRadius: 4,
+                  color: 'var(--color-text-primary)',
+                  fontFamily: 'inherit',
+                  fontSize: '0.875rem',
+                  resize: 'vertical',
+                }}
+              />
+            </div>
+
+            {/* Actions */}
+            <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+              <button
+                onClick={() => setSelectedSelection(null)}
+                style={{
+                  padding: '8px 16px',
+                  background: 'transparent',
+                  border: '1px solid var(--color-border)',
+                  borderRadius: 4,
+                  color: 'var(--color-text-secondary)',
+                  cursor: 'pointer',
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => handleReview(selectedSelection.id, 'rejected')}
+                disabled={actionLoading}
+                style={{
+                  padding: '8px 16px',
+                  background: '#8A8A7A',
+                  border: 'none',
+                  borderRadius: 4,
+                  color: 'var(--color-bg)',
+                  cursor: actionLoading ? 'not-allowed' : 'pointer',
+                  opacity: actionLoading ? 0.6 : 1,
+                }}
+              >
+                Reject
+              </button>
+              <button
+                onClick={() => handleReview(selectedSelection.id, 'approved')}
+                disabled={actionLoading}
+                style={{
+                  padding: '8px 16px',
+                  background: '#4CAF50',
+                  border: 'none',
+                  borderRadius: 4,
+                  color: 'white',
+                  cursor: actionLoading ? 'not-allowed' : 'pointer',
+                  opacity: actionLoading ? 0.6 : 1,
+                }}
+              >
+                Approve
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
